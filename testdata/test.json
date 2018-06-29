@@ -1,0 +1,12 @@
+{
+  "version": "3.3",
+  "key1": {
+    "valkey1": {
+      "version": 22
+    },
+    "valkey2": {
+      "valkeykey_1": "stringval",
+      "valkeykey_2": 3
+    }
+  }
+}
