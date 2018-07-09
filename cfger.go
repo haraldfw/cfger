@@ -11,7 +11,7 @@
 // Raw Versus Structured Read
 //
 // ReadCfg(val) wraps ReadStructuredCfg(val, nil), which results in a raw read. So if val here resolves to a JSON-file
-// it returns the contents of the JSON-file as a string, without unmarshalling.
+// it returns the contents of the JSON-file as a string, without unmarshalling
 //
 // For cfger to unmarshal the file, you need to supply a valid interface in the form defined in the documentation for
 // the package https://golang.org/pkg/encoding/json/#Unmarshal. Similarly for YAML-unmarshalling you have to supply a valid interface as described in the
@@ -86,6 +86,12 @@ func ReadCfgFile(inPath string, structure interface{}) (string, error) {
 	content, err := ioutil.ReadFile(inPath)
 	if err != nil {
 		return "", err
+	}
+
+	_, ok := structure.(*[]byte)
+	if ok {
+		*structure.(*[]byte) = content
+		return "", nil
 	}
 
 	if structure != nil{
