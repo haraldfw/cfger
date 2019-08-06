@@ -1,0 +1,10 @@
+{
+    "val1": "hello",
+    "val2": "file::./tag-value.txt",
+    "struct1": {
+        "structVal1": "file::./tag-value.txt",
+        "struct1.1": {
+            "structVal1.1": "env::ELLO_VALUE"
+        }
+    }
+}

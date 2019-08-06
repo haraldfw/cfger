@@ -19,14 +19,16 @@
 package cfger
 
 import (
-	"strings"
-	"io/ioutil"
-	"gopkg.in/yaml.v2"
 	"encoding/json"
-	"path"
-	"os"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"reflect"
+	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -94,7 +96,7 @@ func ReadCfgFile(inPath string, structure interface{}) (string, error) {
 		return "", nil
 	}
 
-	if structure != nil{
+	if structure != nil {
 		if strings.HasSuffix(inPath, ".yml") || strings.HasSuffix(inPath, ".yaml") {
 			err = yaml.Unmarshal(content, structure)
 			return "", err
@@ -104,4 +106,103 @@ func ReadCfgFile(inPath string, structure interface{}) (string, error) {
 		}
 	}
 	return string(content), nil
+}
+
+func ReadEnvRecursive(val string, structure interface{}) (string, error) {
+	envVal, ok := os.LookupEnv(val)
+
+	if !ok {
+		return "", errors.New(fmt.Sprintf("Environment variable %q not found", val))
+	}
+
+	return ReadStructuredCfgRecursive(envVal, structure)
+}
+
+func ReadStructuredCfgRecursive(val string, structure interface{}) (string, error) {
+	switch strings.SplitN(val, "::", 2)[0] {
+	case "secret":
+		return "", ReadStructuredCfgFileRecursive(path.Join(secretRoot, val[secretPrefLen:]), structure)
+	case "file":
+		return "", ReadStructuredCfgFileRecursive(val[filePrefLen:], structure)
+	case "env":
+		return ReadEnvRecursive(val[envPrefLen:], structure)
+	default:
+		return val, nil
+	}
+}
+
+func ReadStructuredCfgFileRecursive(inPath string, structure interface{}) error {
+	content, err := ioutil.ReadFile(inPath)
+	if err != nil {
+		return err
+	}
+
+	_, ok := structure.(*[]byte)
+	if ok {
+		*structure.(*[]byte) = content
+		return nil
+	}
+
+	if structure == nil {
+		return nil
+	}
+
+	if strings.HasSuffix(inPath, ".yml") || strings.HasSuffix(inPath, ".yaml") {
+		err = yaml.Unmarshal(content, structure)
+	} else if strings.HasSuffix(inPath, ".json") {
+		err = json.Unmarshal(content, structure)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	err = findVal(structure, -1, []int{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func findVal(structure interface{}, numFields int, fieldIndices []int) error {
+	var elem reflect.Value
+	{
+		vos := reflect.ValueOf(structure)
+		if vos.Kind() == reflect.Ptr {
+			elem = vos.Elem()
+		} else {
+			elem = vos
+		}
+	}
+
+	if elem.Kind() == reflect.Struct {
+
+		if numFields == -1 {
+			numFields = elem.NumField()
+		}
+
+		for i := 0; i < numFields; i++ {
+			_fieldIndices := append(fieldIndices, i)
+
+			field := elem.FieldByIndex(_fieldIndices)
+			if !field.IsValid() || !field.CanSet() {
+				continue
+			}
+
+			if field.Kind() == reflect.Struct {
+				err := findVal(structure, field.NumField(), _fieldIndices)
+				if err != nil {
+					return err
+				}
+			} else if field.Kind() == reflect.String {
+				rv, err := ReadStructuredCfg(field.String(), nil)
+				if err != nil {
+					return err
+				}
+				field.SetString(rv)
+			}
+		}
+	}
+	return nil
 }
