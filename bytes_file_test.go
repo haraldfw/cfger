@@ -15,7 +15,7 @@ wut
 func TestUnstrBytesFile(t *testing.T) {
 	os.Setenv("TESTFILEBYTESUNSTR", "file::./testdata/bytes")
 	var val []byte
-	_, err := ReadStructuredCfg("env::TESTFILEBYTESUNSTR", &val)
+	err := ReadStructuredCfg("env::TESTFILEBYTESUNSTR", &val)
 	if err != nil {
 		log.Error(err)
 	}

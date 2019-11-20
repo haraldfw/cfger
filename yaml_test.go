@@ -52,7 +52,7 @@ func TestYAML(t *testing.T) {
 	setupYAML()
 
 	a := yamlStruct{}
-	_, err := ReadStructuredCfg("env::TESTFILE", &a)
+	err := ReadStructuredCfg("env::TESTFILE", &a)
 	if err != nil {
 		log.Error(err)
 	}
@@ -64,7 +64,7 @@ func TestYAML(t *testing.T) {
 	log.Info("env::file:: yaml file to Go struct passed")
 
 	a = yamlStruct{}
-	_, err = ReadStructuredCfg("file::./testdata/test.yml", &a)
+	err = ReadStructuredCfg("file::./testdata/test.yml", &a)
 
 	if err != nil {
 		log.Error(err)

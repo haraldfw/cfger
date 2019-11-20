@@ -51,7 +51,7 @@ func TestJSON(t *testing.T) {
 	setupJSON()
 
 	a := jsonStruct{}
-	_, err := ReadStructuredCfg("env::TESTFILEJSON", &a)
+	err := ReadStructuredCfg("env::TESTFILEJSON", &a)
 	if err != nil {
 		log.Error(err)
 	}
@@ -63,7 +63,7 @@ func TestJSON(t *testing.T) {
 	log.Info("env::file:: json file to Go struct passed")
 
 	a = jsonStruct{}
-	_, err = ReadStructuredCfg("file::./testdata/test.json", &a)
+	err = ReadStructuredCfg("file::./testdata/test.json", &a)
 
 	if err != nil {
 		log.Error(err)
