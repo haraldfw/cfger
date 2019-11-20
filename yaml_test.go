@@ -32,7 +32,7 @@ var factualYAMLStructured = yamlStruct{
 
 type yamlStruct struct {
 	Version string
-	Key1 struct {
+	Key1    struct {
 		Valkey1 struct {
 			Version int
 		}
@@ -42,7 +42,6 @@ type yamlStruct struct {
 		}
 	}
 }
-
 
 func setupYAML() {
 	os.Setenv("TESTFILE", "file::./testdata/test.yml")
@@ -74,5 +73,24 @@ func TestYAML(t *testing.T) {
 
 	if a != factualYAMLStructured {
 		log.Fatal("Read from file failed with inequality-error")
+	}
+
+	os.Setenv("CONFIG", "file::testdata/recurse.yml")
+	var b = struct {
+		Root struct {
+			Text string `yaml:"text"`
+		} `yaml:"root"`
+	}{}
+
+	err = ReadStructuredCfg("env::CONFIG", &b, true)
+	if b.Root.Text != "data" {
+		t.Fatalf("Text was expected to be 'data', but was '%s'", b.Root.Text)
+	}else if err != nil{
+		t.Fatalf("Got err when none was expected: %s", err.Error())
+	}
+
+	err = ReadStructuredCfg("env::CONFIG", 0, true)
+	if err == nil{
+		t.Fatal("Wanted an err, but got none")
 	}
 }

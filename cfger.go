@@ -45,30 +45,35 @@ func ReadCfg(val string) (string, error) {
 }
 
 // Check if the input has a prefix, e. g. "secret::" or "file::", if it does try to read the file in the given location.
-// In the case of neither the input will be returned. If a prefix is given but an error occurs when reading, an empty
-// string and the error will be returned. If no prefix is given the given val i returned.
+// In the case of neither the input will be returned. If a prefix is given but an error occurs when reading, the error
+// is returned,
 //
 // Valid prefixes are:
 //  1. env:: reads from environment variables.
 //  2. secret:: reads file from /run/secrets
 //  3. file:: reads file with given path
 //
+// If not prefix is provided, the input structure type is checked. If a string pointer, the value of the pointer
+// is set to the input.
+//
 // Additionally if a file has .yml or .json as a suffix and the given interface{} is not nil, the interface will be used
 // to unmarshal the file at the given path.
 //
 // If a read environment-variable contains a prefix this function will be called with the environment-variable's value.
-func ReadStructuredCfg(val string, structure interface{}) (error) {
+func ReadStructuredCfg(val string, structure interface{}, populateRecursively ...bool) (error) {
 	if structure == nil {
 		return errors.New("no output structure provided")
+	} else if len(populateRecursively) > 1 {
+		return errors.New("more than one populateRecursively value passed")
 	}
 
 	switch strings.SplitN(val, "::", 2)[0] {
 	case "secret":
-		return ReadCfgFile(path.Join(secretRoot, val[secretPrefLen:]), structure)
+		return ReadCfgFile(path.Join(secretRoot, val[secretPrefLen:]), structure, populateRecursively...)
 	case "file":
-		return ReadCfgFile(val[filePrefLen:], structure)
+		return ReadCfgFile(val[filePrefLen:], structure, populateRecursively...)
 	case "env":
-		return ReadEnv(val[envPrefLen:], structure)
+		return ReadEnv(val[envPrefLen:], structure, populateRecursively...)
 	default:
 		switch v := structure.(type) {
 		case *string:
@@ -84,20 +89,20 @@ func ReadStructuredCfg(val string, structure interface{}) (error) {
 
 // Reads an environment-variable by the given name. If the environment-variable contains a prefix the path will be
 // resolved.
-func ReadEnv(val string, structure interface{}) (error) {
+func ReadEnv(val string, structure interface{}, populateRecursively ...bool) (error) {
 	envVal, ok := os.LookupEnv(val)
 
 	if !ok {
 		return errors.New(fmt.Sprintf("Environment variable %q not found", val))
 	}
 
-	return ReadStructuredCfg(envVal, structure)
+	return ReadStructuredCfg(envVal, structure, populateRecursively...)
 }
 
 // Reads the file at the given path and returns the contents as a string. If the suffix of the path is .yml/.yaml/.json
-// the contents are unmarshalled before they are returned. Returns an empty string and an error if an error is returned
+// the contents are unmarshalled before they are returned. Returns error if an error is returned
 // while reading or unmarshalling.
-func ReadCfgFile(inPath string, structure interface{}) (err error) {
+func ReadCfgFile(inPath string, structure interface{}, populateRecursively ...bool) (err error) {
 	if structure == nil {
 		return errors.New("no output structure provided")
 	}
@@ -119,71 +124,17 @@ func ReadCfgFile(inPath string, structure interface{}) (err error) {
 	default:
 		if strings.HasSuffix(inPath, ".yml") || strings.HasSuffix(inPath, ".yaml") {
 			err = yaml.Unmarshal(content, structure)
-			return
 		} else if strings.HasSuffix(inPath, ".json") {
 			err = json.Unmarshal(content, structure)
-			return
+		} else {
+			err = errors.New("unsupported file type - supported types are 'yml' and 'json' ")
 		}
-		err = errors.New("unsupported file type - supported types are 'yml' and 'json' ")
+
+		if err == nil && doRecurse(populateRecursively...) {
+			return findVal(structure, -1, []int{})
+		}
 	}
 	return
-}
-
-func ReadEnvRecursive(val string, structure interface{}) (string, error) {
-	envVal, ok := os.LookupEnv(val)
-
-	if !ok {
-		return "", errors.New(fmt.Sprintf("Environment variable %q not found", val))
-	}
-
-	return ReadStructuredCfgRecursive(envVal, structure)
-}
-
-func ReadStructuredCfgRecursive(val string, structure interface{}) (string, error) {
-	switch strings.SplitN(val, "::", 2)[0] {
-	case "secret":
-		return "", ReadStructuredCfgFileRecursive(path.Join(secretRoot, val[secretPrefLen:]), structure)
-	case "file":
-		return "", ReadStructuredCfgFileRecursive(val[filePrefLen:], structure)
-	case "env":
-		return ReadEnvRecursive(val[envPrefLen:], structure)
-	default:
-		return val, nil
-	}
-}
-
-func ReadStructuredCfgFileRecursive(inPath string, structure interface{}) error {
-	content, err := ioutil.ReadFile(inPath)
-	if err != nil {
-		return err
-	}
-
-	_, ok := structure.(*[]byte)
-	if ok {
-		*structure.(*[]byte) = content
-		return nil
-	}
-
-	if structure == nil {
-		return nil
-	}
-
-	if strings.HasSuffix(inPath, ".yml") || strings.HasSuffix(inPath, ".yaml") {
-		err = yaml.Unmarshal(content, structure)
-	} else if strings.HasSuffix(inPath, ".json") {
-		err = json.Unmarshal(content, structure)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	err = findVal(structure, -1, []int{})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func findVal(structure interface{}, numFields int, fieldIndices []int) error {
@@ -217,6 +168,7 @@ func findVal(structure interface{}, numFields int, fieldIndices []int) error {
 					return err
 				}
 			} else if field.Kind() == reflect.String {
+				//TODO: Generate test to check that this works.
 				var output string
 				err := ReadStructuredCfg(field.String(), &output)
 				if err != nil {
@@ -227,4 +179,8 @@ func findVal(structure interface{}, numFields int, fieldIndices []int) error {
 		}
 	}
 	return nil
+}
+
+func doRecurse(populateRecursively ...bool) bool {
+	return len(populateRecursively) > 0 && populateRecursively[0]
 }

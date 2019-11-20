@@ -29,7 +29,7 @@ func TestTags(t *testing.T) {
 
 	var ello ValueBoi
 
-	_, err := ReadStructuredCfgRecursive("env::VAL", &ello)
+	err := ReadStructuredCfg("env::VAL", &ello, true)
 	if err != nil {
 		t.Fatal(err)
 	}
