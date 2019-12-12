@@ -2,8 +2,8 @@ package cfger
 
 import (
 	log "github.com/sirupsen/logrus"
-	"testing"
 	"os"
+	"testing"
 )
 
 var factualYAMLStructured = yamlStruct{
@@ -43,8 +43,22 @@ type yamlStruct struct {
 	}
 }
 
+type recurseYamlStruct struct {
+	Root struct {
+		Text string `yaml:"text"`
+	} `yaml:"root"`
+}
+
+type recurseMixedStruct struct {
+	Root struct {
+		Data recurseJsonStruct `yaml:"data"`
+	} `yaml:"root"`
+}
+
 func setupYAML() {
 	os.Setenv("TESTFILE", "file::./testdata/test.yml")
+	os.Setenv("RECURSE", "file::testdata/recurse.yml")
+	os.Setenv("MIXED", "file::testdata/mixed.yml")
 }
 
 func TestYAML(t *testing.T) {
@@ -70,27 +84,21 @@ func TestYAML(t *testing.T) {
 	}
 	log.Info("file:: yaml file to Go struct passed")
 
-
 	if a != factualYAMLStructured {
 		log.Fatal("Read from file failed with inequality-error")
 	}
 
-	os.Setenv("CONFIG", "file::testdata/recurse.yml")
-	var b = struct {
-		Root struct {
-			Text string `yaml:"text"`
-		} `yaml:"root"`
-	}{}
+	var b = recurseYamlStruct{}
 
-	err = ReadStructuredCfg("env::CONFIG", &b, true)
+	err = ReadStructuredCfg("env::RECURSE", &b, true)
 	if b.Root.Text != "data" {
 		t.Fatalf("Text was expected to be 'data', but was '%s'", b.Root.Text)
-	}else if err != nil{
+	} else if err != nil {
 		t.Fatalf("Got err when none was expected: %s", err.Error())
 	}
 
-	err = ReadStructuredCfg("env::CONFIG", 0, true)
-	if err == nil{
+	err = ReadStructuredCfg("env::RECURSE", 0, true)
+	if err == nil {
 		t.Fatal("Wanted an err, but got none")
 	}
 }

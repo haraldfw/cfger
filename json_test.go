@@ -43,8 +43,15 @@ var factualStructured = jsonStruct{
 	},
 }
 
+type recurseJsonStruct struct {
+	Root struct {
+		Text string `json:"text"`
+	} `json:"root"`
+}
+
 func setupJSON() {
 	os.Setenv("TESTFILEJSON", "file::./testdata/test.json")
+	os.Setenv("RECURSE", "file::./testdata/recurse.json")
 }
 
 func TestJSON(t *testing.T) {
@@ -74,4 +81,18 @@ func TestJSON(t *testing.T) {
 		log.Fatal("Read from file failed with inequality-error")
 	}
 
+
+	var b = recurseJsonStruct{}
+
+	err = ReadStructuredCfg("env::RECURSE", &b, true)
+	if b.Root.Text != "data" {
+		t.Fatalf("Text was expected to be 'data', but was '%s'", b.Root.Text)
+	} else if err != nil {
+		t.Fatalf("Got err when none was expected: %s", err.Error())
+	}
+
+	err = ReadStructuredCfg("env::RECURSE", 0, true)
+	if err == nil {
+		t.Fatal("Wanted an err, but got none")
+	}
 }
