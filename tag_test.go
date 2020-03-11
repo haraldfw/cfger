@@ -4,8 +4,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type ValueBoi struct {
@@ -48,6 +46,4 @@ func TestTags(t *testing.T) {
 	if !reflect.DeepEqual(ello, factualCfg) {
 		t.Fatal("mismatch between read file and factual file")
 	}
-
-	log.Info("Nested struct cfger read passed")
 }

@@ -1,14 +1,14 @@
 package cfger
 
 import (
-	log "github.com/sirupsen/logrus"
-	"testing"
 	"os"
+	"reflect"
+	"testing"
 )
 
 type jsonStruct struct {
 	Version string
-	Key1 struct {
+	Key1    struct {
 		Valkey1 struct {
 			Version int
 		}
@@ -53,25 +53,20 @@ func TestJSON(t *testing.T) {
 	a := jsonStruct{}
 	_, err := ReadStructuredCfg("env::TESTFILEJSON", &a)
 	if err != nil {
-		log.Error(err)
+		t.Fatal(err)
 	}
 
-	if a != factualStructured {
-		log.Fatal("Read from env::file failed with inequality-error")
+	if !reflect.DeepEqual(a, factualStructured) {
+		t.Fatal("Read from env::file failed with inequality-error")
 	}
-
-	log.Info("env::file:: json file to Go struct passed")
 
 	a = jsonStruct{}
 	_, err = ReadStructuredCfg("file::./testdata/test.json", &a)
 
 	if err != nil {
-		log.Error(err)
+		t.Fatal(err)
 	}
-	log.Info("file:: json file to Go struct passed")
-
-	if a != factualStructured {
-		log.Fatal("Read from file failed with inequality-error")
+	if !reflect.DeepEqual(a, factualStructured) {
+		t.Fatal("Read from file failed with inequality-error")
 	}
-
 }

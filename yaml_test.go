@@ -1,9 +1,9 @@
 package cfger
 
 import (
-	log "github.com/sirupsen/logrus"
-	"testing"
 	"os"
+	"reflect"
+	"testing"
 )
 
 var factualYAMLStructured = yamlStruct{
@@ -32,7 +32,7 @@ var factualYAMLStructured = yamlStruct{
 
 type yamlStruct struct {
 	Version string
-	Key1 struct {
+	Key1    struct {
 		Valkey1 struct {
 			Version int
 		}
@@ -42,7 +42,6 @@ type yamlStruct struct {
 		}
 	}
 }
-
 
 func setupYAML() {
 	os.Setenv("TESTFILE", "file::./testdata/test.yml")
@@ -54,25 +53,20 @@ func TestYAML(t *testing.T) {
 	a := yamlStruct{}
 	_, err := ReadStructuredCfg("env::TESTFILE", &a)
 	if err != nil {
-		log.Error(err)
+		t.Fatal(err)
 	}
 
-	if a != factualYAMLStructured {
-		log.Fatal("Read from environment failed with inequality-error")
+	if !reflect.DeepEqual(a, factualYAMLStructured) {
+		t.Fatal("Read from environment failed with inequality-error")
 	}
-
-	log.Info("env::file:: yaml file to Go struct passed")
 
 	a = yamlStruct{}
 	_, err = ReadStructuredCfg("file::./testdata/test.yml", &a)
 
 	if err != nil {
-		log.Error(err)
+		t.Fatal(err)
 	}
-	log.Info("file:: yaml file to Go struct passed")
-
-
-	if a != factualYAMLStructured {
-		log.Fatal("Read from file failed with inequality-error")
+	if !reflect.DeepEqual(a, factualYAMLStructured) {
+		t.Fatal("Read from file failed with inequality-error")
 	}
 }

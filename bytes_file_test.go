@@ -1,9 +1,8 @@
 package cfger
 
 import (
-	log "github.com/sirupsen/logrus"
-	"testing"
 	"os"
+	"testing"
 )
 
 var factualFileAsString = `hello
@@ -17,12 +16,10 @@ func TestUnstrBytesFile(t *testing.T) {
 	var val []byte
 	_, err := ReadStructuredCfg("env::TESTFILEBYTESUNSTR", &val)
 	if err != nil {
-		log.Error(err)
+		t.Fatal(err)
 	}
 
 	if string(val) != factualFileAsString {
-		log.Fatal("Read from file failed with inequality-error")
+		t.Fatal("Read from file failed with inequality-error")
 	}
-
-	log.Info("Unstructured file test passed")
 }
