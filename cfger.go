@@ -51,7 +51,7 @@ func ReadCfg(val string) (string, error) {
 //
 // Valid prefixes are:
 //  1. env:: reads from environment variables.
-//  2. secret:: reads file from /run/secrets
+//  2. secret:: reads file from /run/secrets (a docker secret)
 //  3. file:: reads file with given path
 //
 // Additionally if a file has .yml or .json as a suffix and the given interface{} is not nil, the
